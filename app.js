@@ -113,7 +113,12 @@ class DrivingLogApp {
 
     setCurrentDateTime() {
         const now = new Date();
-        const dateTimeString = now.toISOString().slice(0, 16);
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const dateTimeString = `${year}-${month}-${day}T${hours}:${minutes}`;
         document.getElementById('datetime').value = dateTimeString;
     }
 
@@ -370,22 +375,44 @@ class DrivingLogApp {
 
     exportData() {
         if (this.records.length === 0) {
-            this.showNotification('エクスポートする記録がありません', 'warning');
+            this.showNotification('エクスポートするデータがありません', 'error');
             return;
         }
 
-        const dataStr = JSON.stringify(this.records, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        // CSVヘッダー
+        const headers = ['日時', '走行距離(km)', '移動先', 'アルコールチェック(mg)', '給油記録(L)'];
+        
+        // データをCSV形式に変換
+        const csvRows = [
+            headers.join(','),
+            ...this.records.map(record => {
+                return [
+                    record.datetime,
+                    record.distance || '',
+                    `"${record.destination}"`,
+                    record.alcoholCheck || '',
+                    record.fuelRecord || ''
+                ].join(',');
+            })
+        ];
+
+        const csvContent = csvRows.join('\n');
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
         
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(dataBlob);
-        link.download = `driving-log-${new Date().toISOString().split('T')[0]}.json`;
+        const now = new Date();
+        const dateStr = now.getFullYear() + 
+                       String(now.getMonth() + 1).padStart(2, '0') + 
+                       String(now.getDate()).padStart(2, '0');
+        link.href = url;
+        link.download = `運転日誌_${dateStr}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
+        URL.revokeObjectURL(url);
         
-        this.showNotification('データをエクスポートしました', 'success');
+        this.showNotification('CSVファイルをエクスポートしました', 'success');
     }
 
     importData(file) {
