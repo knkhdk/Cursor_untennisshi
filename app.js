@@ -398,21 +398,34 @@ class DrivingLogApp {
 
         const csvContent = csvRows.join('\n');
         const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
         
-        const link = document.createElement('a');
+        // 現在の日時を取得してファイル名を生成
         const now = new Date();
         const dateStr = now.getFullYear() + 
                        String(now.getMonth() + 1).padStart(2, '0') + 
                        String(now.getDate()).padStart(2, '0');
+        const fileName = `運転日誌_${dateStr}.csv`;
+
+        // ファイルを保存
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
         link.href = url;
-        link.download = `運転日誌_${dateStr}.csv`;
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        
-        this.showNotification('CSVファイルをエクスポートしました', 'success');
+
+        // OneDriveへの保存方法を案内
+        this.showNotification(
+            'ファイルを保存しました。OneDriveにアップロードするには、' +
+            '1. OneDriveを開く' +
+            '2. 「アップロード」をクリック' +
+            '3. 保存したファイルを選択' +
+            'してください。',
+            'info',
+            10000 // 10秒間表示
+        );
     }
 
     importData(file) {
@@ -485,17 +498,18 @@ class DrivingLogApp {
         this.confirmCallback = null;
     }
 
-    showNotification(message, type = 'success') {
+    showNotification(message, type = 'success', duration = 5000) {
         const notification = document.getElementById('notification');
-        const messageElement = document.getElementById('notification-message');
+        const notificationMessage = document.getElementById('notification-message');
         
-        messageElement.textContent = message;
         notification.className = `notification ${type}`;
+        notificationMessage.textContent = message;
         notification.classList.remove('hidden');
-
+        
+        // 通知を自動的に非表示にする
         setTimeout(() => {
             notification.classList.add('hidden');
-        }, 4000);
+        }, duration);
     }
 }
 
