@@ -3,7 +3,7 @@ class DrivingLogApp {
     constructor() {
         this.records = [];
         this.currentId = 1;
-        this.version = '0.957';
+        this.version = '1.00';
         this.lastUpdate = new Date().toISOString();
         this.confirmCallback = null;
         this.backupInterval = null;
