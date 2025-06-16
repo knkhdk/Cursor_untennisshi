@@ -7,19 +7,17 @@ class DrivingLogApp {
         this.lastUpdate = new Date().toISOString();
         this.confirmCallback = null;
         this.backupInterval = null;
-        this.init();
-    }
-
-    init() {
-        this.loadData(); // 保存されたデータを読み込む
-        this.bindEvents();
-        this.setCurrentDateTime();
-        this.updateRecordCount();
-        this.updateMonthFilter();
+        this.loadData();
+        this.initializeEventListeners();
         this.displayRecords();
-        this.checkSameDayRecords();
+        this.updateRecordCount();
+        this.setCurrentDateTime();
         this.startAutoBackup();
         this.checkStorageAvailability();
+    }
+
+    initializeEventListeners() {
+        this.bindEvents();
     }
 
     // ストレージの利用可能性をチェック
@@ -43,12 +41,14 @@ class DrivingLogApp {
     // データをローカルストレージに保存
     saveData() {
         try {
-            localStorage.setItem('drivingLog', JSON.stringify({
+            const data = {
                 records: this.records,
                 currentId: this.currentId,
                 version: this.version,
                 lastUpdate: this.lastUpdate
-            }));
+            };
+            localStorage.setItem('drivingLog', JSON.stringify(data));
+            console.log('データを保存しました:', data);
         } catch (error) {
             console.error('データの保存に失敗しました:', error);
             this.showNotification('データの保存に失敗しました', 'error');
@@ -65,6 +65,7 @@ class DrivingLogApp {
                 this.currentId = parsedData.currentId || 1;
                 this.version = parsedData.version || this.version;
                 this.lastUpdate = parsedData.lastUpdate || this.lastUpdate;
+                console.log('データを読み込みました:', parsedData);
             }
         } catch (error) {
             console.error('データの読み込みに失敗しました:', error);
@@ -249,10 +250,12 @@ class DrivingLogApp {
 
         this.records.push(record);
         this.saveData();
-        this.displayRecords();
-        this.updateRecordCount();
-        this.showNotification('記録を追加しました');
-        this.resetForm();
+        setTimeout(() => {
+            this.displayRecords();
+            this.updateRecordCount();
+            this.showNotification('記録を追加しました');
+            this.resetForm();
+        }, 100);
     }
 
     validateRecord(record) {
@@ -300,7 +303,12 @@ class DrivingLogApp {
 
     displayRecords() {
         const recordsContainer = document.getElementById('records-container');
-        if (!recordsContainer) return;
+        if (!recordsContainer) {
+            console.error('records-containerが見つかりません');
+            return;
+        }
+
+        console.log('記録を表示します:', this.records);
 
         if (this.records.length === 0) {
             recordsContainer.innerHTML = `
@@ -314,6 +322,7 @@ class DrivingLogApp {
 
         // 日付でグループ化
         const groupedRecords = this.groupRecordsByDate(this.records);
+        console.log('グループ化した記録:', groupedRecords);
         
         // 日付を降順（新しい順）にソート
         const sortedDates = Object.keys(groupedRecords).sort((a, b) => {
@@ -338,6 +347,7 @@ class DrivingLogApp {
         }
         
         recordsContainer.innerHTML = html;
+        console.log('記録一覧を更新しました');
     }
 
     groupRecordsByDate(records) {
