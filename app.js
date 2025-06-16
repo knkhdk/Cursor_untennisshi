@@ -43,42 +43,32 @@ class DrivingLogApp {
     // データをローカルストレージに保存
     saveData() {
         try {
-            localStorage.setItem('drivingLogRecords', JSON.stringify(this.records));
-            localStorage.setItem('drivingLogCurrentId', this.currentId.toString());
-            localStorage.setItem('drivingLogLastBackup', new Date().toISOString());
+            localStorage.setItem('drivingLog', JSON.stringify({
+                records: this.records,
+                currentId: this.currentId,
+                version: this.version,
+                lastUpdate: this.lastUpdate
+            }));
         } catch (error) {
             console.error('データの保存に失敗しました:', error);
-            this.showNotification('データの保存に失敗しました。ブラウザのストレージ容量を確認してください。', 'error');
+            this.showNotification('データの保存に失敗しました', 'error');
         }
     }
 
     // ローカルストレージからデータを読み込む
     loadData() {
         try {
-            const savedRecords = localStorage.getItem('drivingLogRecords');
-            const savedCurrentId = localStorage.getItem('drivingLogCurrentId');
-            const lastBackup = localStorage.getItem('drivingLogLastBackup');
-            
-            if (savedRecords) {
-                this.records = JSON.parse(savedRecords);
-            }
-            if (savedCurrentId) {
-                this.currentId = parseInt(savedCurrentId);
-            }
-
-            // 最後のバックアップから24時間以上経過している場合は警告
-            if (lastBackup) {
-                const lastBackupDate = new Date(lastBackup);
-                const now = new Date();
-                const hoursSinceLastBackup = (now - lastBackupDate) / (1000 * 60 * 60);
-                
-                if (hoursSinceLastBackup > 24) {
-                    this.showNotification('最後のバックアップから24時間以上経過しています。データをエクスポートすることをお勧めします。', 'warning');
-                }
+            const data = localStorage.getItem('drivingLog');
+            if (data) {
+                const parsedData = JSON.parse(data);
+                this.records = parsedData.records || [];
+                this.currentId = parsedData.currentId || 1;
+                this.version = parsedData.version || this.version;
+                this.lastUpdate = parsedData.lastUpdate || this.lastUpdate;
             }
         } catch (error) {
             console.error('データの読み込みに失敗しました:', error);
-            this.showNotification('データの読み込みに失敗しました。バックアップからの復元を試みてください。', 'error');
+            this.showNotification('データの読み込みに失敗しました', 'error');
         }
     }
 
