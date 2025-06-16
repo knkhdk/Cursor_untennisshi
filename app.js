@@ -3,7 +3,7 @@ class DrivingLog {
     constructor() {
         this.records = [];
         this.currentId = 1;
-        this.version = '0.92';
+        this.version = '1.11';
         this.lastUpdate = new Date().toISOString();
         this.confirmCallback = null;
         this.backupInterval = null;
@@ -17,7 +17,6 @@ class DrivingLog {
         this.setCurrentDateTime();
         this.updateRecordCount();
         this.updateMonthFilter();
-        this.displayRecords();
         this.checkSameDayRecords();
         this.startAutoBackup();
         this.checkStorageAvailability();
@@ -66,18 +65,34 @@ class DrivingLog {
 
     addRecord() {
         console.log('記録の追加を開始します');
-        const datetime = document.getElementById('datetime').value;
+        let datetime = document.getElementById('datetime').value;
         const destination = document.getElementById('destination').value;
-        const purpose = document.getElementById('purpose').value;
         const distance = document.getElementById('distance').value;
-        const fuel = document.getElementById('fuel').value;
-        const alcohol = document.getElementById('alcohol').checked;
+        const alcohol = document.getElementById('alcohol-check').value;
+        const fuel = document.getElementById('fuel-record').value;
 
-        console.log('入力値:', { datetime, destination, purpose, distance, fuel, alcohol });
+        // 日時が入力されていない場合、現在の日時を設定
+        if (!datetime) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            datetime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            document.getElementById('datetime').value = datetime;
+        }
 
-        if (!datetime || !destination) {
+        // 日時形式の正規化（YYYY-MM-DDThh:mm形式に統一）
+        if (datetime && !datetime.includes('T')) {
+            datetime = datetime.replace(' ', 'T');
+        }
+
+        console.log('入力値:', { datetime, destination, distance, alcohol, fuel });
+
+        if (!destination) {
             console.log('必須項目が入力されていません');
-            this.showNotification('日時と目的地は必須項目です', 'error');
+            this.showNotification('目的地は必須項目です', 'error');
             return;
         }
 
@@ -85,10 +100,9 @@ class DrivingLog {
             id: this.currentId++,
             datetime,
             destination,
-            purpose,
             distance: distance ? parseFloat(distance) : null,
-            fuel: fuel ? parseFloat(fuel) : null,
-            alcohol
+            alcohol: alcohol ? parseFloat(alcohol) : null,
+            fuel: fuel ? parseFloat(fuel) : null
         };
 
         console.log('新しい記録:', record);
@@ -158,7 +172,17 @@ class DrivingLog {
 
     bindEvents() {
         console.log('イベントリスナーを設定します');
-        document.getElementById('addButton').addEventListener('click', () => this.addRecord());
+        // フォームの送信イベントを追加
+        document.getElementById('driving-form').addEventListener('submit', (e) => {
+            e.preventDefault(); // フォームのデフォルト送信を防止
+            this.addRecord();
+        });
+        // 記録一覧表示ボタンのイベントリスナー
+        document.getElementById('show-records-btn').addEventListener('click', () => {
+            const recordsSection = document.getElementById('records-section');
+            recordsSection.style.display = 'block';
+            this.displayRecords();
+        });
         document.getElementById('exportButton').addEventListener('click', () => this.exportData());
         document.getElementById('importButton').addEventListener('click', () => this.importData());
         document.getElementById('clearButton').addEventListener('click', () => this.clearAllRecords());
@@ -271,15 +295,36 @@ class DrivingLog {
             // 各日付内の記録を時間の降順（新しい順）にソート
             records.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
             
+            // 日付を日本語形式に変換
+            const formattedDate = new Date(date.replace(/年|月|日/g, '/')).toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
             html += `
                 <div class="date-card">
-                    <div class="date-card__header">${date}</div>
+                    <div class="date-card__header">
+                        ${formattedDate}
+                        <button class="btn btn--danger btn--small delete-date-btn" data-date="${formattedDate}">
+                            この日の記録を削除
+                        </button>
+                    </div>
                     ${records.map(record => this.createRecordEntry(record)).join('')}
                 </div>
             `;
         }
         
         recordsContainer.innerHTML = html;
+
+        // 日付ごとの削除ボタンにイベントリスナーを設定
+        document.querySelectorAll('.delete-date-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const date = e.target.dataset.date;
+                this.deleteRecordsByDate(date);
+            });
+        });
+
         console.log('記録一覧を更新しました');
     }
 
@@ -295,9 +340,9 @@ class DrivingLog {
     }
 
     createRecordEntry(record) {
-        const time = record.datetime.split(' ')[1];
+        // 日時文字列から時間部分を抽出
+        const time = record.datetime.split('T')[1]?.substring(0, 5) || '未設定';
         const location = record.destination || '未設定';
-        const purpose = record.purpose || '未設定';
         const distance = record.distance ? `${record.distance}km` : '未設定';
         const fuel = record.fuel ? `${record.fuel}L` : '未設定';
         const alcohol = record.alcohol ? '実施済' : '未実施';
@@ -307,7 +352,6 @@ class DrivingLog {
                 <div class="record-time">${time}</div>
                 <div class="record-details">
                     <div class="record-location">${location}</div>
-                    <div class="record-purpose">${purpose}</div>
                     <div class="record-stats">
                         <span class="record-distance">走行距離: ${distance}</span>
                         <span class="record-fuel">給油量: ${fuel}</span>
@@ -429,18 +473,45 @@ class DrivingLog {
 
     // HTML5 Dialog を使用した確認ダイアログ
     showConfirmDialog(title, message, callback) {
-        const dialog = document.getElementById('confirm-dialog');
-        document.getElementById('dialog-title').textContent = title;
-        document.getElementById('dialog-message').textContent = message;
+        const modal = document.getElementById('confirm-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
         this.confirmCallback = callback;
-        
-        // HTML5 dialog の showModal() を使用
-        dialog.showModal();
+
+        // モーダルを表示
+        modal.classList.add('show');
+
+        // イベントリスナーを設定
+        const handleConfirm = () => {
+            if (this.confirmCallback) {
+                this.confirmCallback();
+            }
+            hideModal();
+        };
+
+        const handleCancel = () => {
+            hideModal();
+        };
+
+        const hideModal = () => {
+            modal.classList.remove('show');
+            modalConfirm.removeEventListener('click', handleConfirm);
+            modalCancel.removeEventListener('click', handleCancel);
+            this.confirmCallback = null;
+        };
+
+        modalConfirm.addEventListener('click', handleConfirm);
+        modalCancel.addEventListener('click', handleCancel);
     }
 
     hideConfirmDialog() {
-        const dialog = document.getElementById('confirm-dialog');
-        dialog.close();
+        const modal = document.getElementById('confirm-modal');
+        modal.classList.remove('show');
         this.confirmCallback = null;
     }
 
@@ -455,6 +526,44 @@ class DrivingLog {
         setTimeout(() => {
             notification.classList.add('hidden');
         }, 3000);
+    }
+
+    // 特定の日付の記録を削除するメソッド
+    deleteRecordsByDate(date) {
+        console.log('削除対象の日付:', date);
+        console.log('削除前の記録数:', this.records.length);
+        
+        this.showConfirmDialog(
+            '確認',
+            `${date}の記録を全て削除しますか？`,
+            () => {
+                // 日付に一致する記録を除外
+                const originalLength = this.records.length;
+                this.records = this.records.filter(record => {
+                    const recordDate = new Date(record.datetime).toLocaleDateString('ja-JP', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                    console.log('比較:', { recordDate, targetDate: date, isMatch: recordDate === date });
+                    return recordDate !== date;
+                });
+                
+                console.log('削除後の記録数:', this.records.length);
+                console.log('削除された記録数:', originalLength - this.records.length);
+
+                if (this.records.length === originalLength) {
+                    this.showNotification('削除する記録が見つかりませんでした', 'error');
+                    return;
+                }
+                
+                this.saveData();
+                this.updateRecordCount();
+                this.updateMonthFilter();
+                this.displayRecords();
+                this.showNotification(`${date}の記録を削除しました`);
+            }
+        );
     }
 }
 
