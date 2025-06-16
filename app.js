@@ -1,113 +1,88 @@
 // 運転日誌アプリケーション - HTML5 Dialog対応版
-class DrivingLogApp {
+class DrivingLog {
     constructor() {
         this.records = [];
         this.currentId = 1;
-        this.version = '1.01';
+        this.version = '0.92';
         this.lastUpdate = new Date().toISOString();
         this.confirmCallback = null;
         this.backupInterval = null;
-        this.dbName = 'DrivingLogDB';
-        this.dbVersion = 1;
-        this.storeName = 'records';
-        this.initDB();
+        this.init();
     }
 
-    initDB() {
-        try {
-            this.db = openDatabase(this.dbName, '1.0', 'Driving Log Database', 2 * 1024 * 1024);
-            this.db.transaction(tx => {
-                tx.executeSql(`
-                    CREATE TABLE IF NOT EXISTS records (
-                        id INTEGER PRIMARY KEY,
-                        datetime TEXT,
-                        destination TEXT,
-                        purpose TEXT,
-                        distance REAL,
-                        fuel REAL,
-                        alcohol INTEGER
-                    )
-                `);
-            }, error => {
-                console.error('テーブル作成エラー:', error);
-                this.showNotification('データベースの初期化に失敗しました', 'error');
-            }, () => {
-                this.loadData();
-                this.initializeEventListeners();
-                this.setCurrentDateTime();
-                this.startAutoBackup();
-                this.checkStorageAvailability();
-            });
-        } catch (error) {
-            console.error('データベースの初期化中にエラーが発生しました:', error);
-            this.showNotification('データベースの初期化中にエラーが発生しました', 'error');
-        }
+    init() {
+        this.loadData(); // 保存されたデータを読み込む
+        this.bindEvents();
+        this.setCurrentDateTime();
+        this.updateRecordCount();
+        this.updateMonthFilter();
+        this.displayRecords();
+        this.checkSameDayRecords();
+        this.startAutoBackup();
+        this.checkStorageAvailability();
     }
 
-    loadData() {
-        try {
-            this.db.transaction(tx => {
-                tx.executeSql('SELECT * FROM records ORDER BY datetime DESC', [], (tx, results) => {
-                    this.records = [];
-                    for (let i = 0; i < results.rows.length; i++) {
-                        const row = results.rows.item(i);
-                        this.records.push({
-                            id: row.id,
-                            datetime: row.datetime,
-                            destination: row.destination,
-                            purpose: row.purpose,
-                            distance: row.distance,
-                            fuel: row.fuel,
-                            alcohol: row.alcohol === 1
-                        });
-                    }
-                    if (this.records.length > 0) {
-                        this.currentId = Math.max(...this.records.map(r => r.id)) + 1;
-                    }
-                    this.displayRecords();
-                    this.updateRecordCount();
-                });
-            }, error => {
-                console.error('データ読み込みエラー:', error);
-                this.showNotification('データの読み込みに失敗しました', 'error');
-            });
-        } catch (error) {
-            console.error('データの読み込み中にエラーが発生しました:', error);
-            this.showNotification('データの読み込み中にエラーが発生しました', 'error');
-        }
-    }
-
+    // データをローカルストレージに保存
     saveData() {
         try {
-            this.db.transaction(tx => {
-                // 既存のデータをクリア
-                tx.executeSql('DELETE FROM records');
-                
-                // 新しいデータを保存
-                this.records.forEach(record => {
-                    tx.executeSql(
-                        'INSERT INTO records (id, datetime, destination, purpose, distance, fuel, alcohol) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                        [
-                            record.id,
-                            record.datetime,
-                            record.destination,
-                            record.purpose,
-                            record.distance,
-                            record.fuel,
-                            record.alcohol ? 1 : 0
-                        ]
-                    );
-                });
-            }, error => {
-                console.error('データ保存エラー:', error);
-                this.showNotification('データの保存に失敗しました', 'error');
-            }, () => {
-                console.log('データを保存しました');
-            });
+            localStorage.setItem('drivingLog', JSON.stringify({
+                records: this.records,
+                currentId: this.currentId,
+                version: this.version,
+                lastUpdate: this.lastUpdate
+            }));
         } catch (error) {
-            console.error('データの保存中にエラーが発生しました:', error);
-            this.showNotification('データの保存中にエラーが発生しました', 'error');
+            console.error('データの保存に失敗しました:', error);
+            this.showNotification('データの保存に失敗しました', 'error');
         }
+    }
+
+    // ローカルストレージからデータを読み込む
+    loadData() {
+        try {
+            const data = localStorage.getItem('drivingLog');
+            if (data) {
+                const parsedData = JSON.parse(data);
+                this.records = parsedData.records || [];
+                this.currentId = parsedData.currentId || 1;
+                this.version = parsedData.version || this.version;
+                this.lastUpdate = parsedData.lastUpdate || this.lastUpdate;
+            }
+        } catch (error) {
+            console.error('データの読み込みに失敗しました:', error);
+            this.showNotification('データの読み込みに失敗しました', 'error');
+        }
+    }
+
+    addRecord() {
+        const datetime = document.getElementById('datetime').value;
+        const destination = document.getElementById('destination').value;
+        const purpose = document.getElementById('purpose').value;
+        const distance = document.getElementById('distance').value;
+        const fuel = document.getElementById('fuel').value;
+        const alcohol = document.getElementById('alcohol').checked;
+
+        if (!datetime || !destination) {
+            this.showNotification('日時と目的地は必須項目です', 'error');
+            return;
+        }
+
+        const record = {
+            id: this.currentId++,
+            datetime,
+            destination,
+            purpose,
+            distance: distance ? parseFloat(distance) : null,
+            fuel: fuel ? parseFloat(fuel) : null,
+            alcohol
+        };
+
+        this.records.push(record);
+        this.saveData();
+        this.displayRecords();
+        this.updateRecordCount();
+        this.showNotification('記録を追加しました');
+        this.resetForm();
     }
 
     initializeEventListeners() {
@@ -282,70 +257,6 @@ class DrivingLogApp {
             alcoholRequired.className = 'optional-indicator';
             alcoholNote.textContent = '同一日の2回目以降は任意です';
         }
-    }
-
-    addRecord() {
-        const datetime = document.getElementById('datetime').value;
-        const destination = document.getElementById('destination').value;
-        const purpose = document.getElementById('purpose').value;
-        const distance = document.getElementById('distance').value;
-        const fuel = document.getElementById('fuel').value;
-        const alcohol = document.getElementById('alcohol').checked;
-
-        if (!datetime || !destination) {
-            this.showNotification('日時と目的地は必須項目です', 'error');
-            return;
-        }
-
-        const record = {
-            id: this.currentId++,
-            datetime,
-            destination,
-            purpose,
-            distance: distance ? parseFloat(distance) : null,
-            fuel: fuel ? parseFloat(fuel) : null,
-            alcohol
-        };
-
-        this.records.push(record);
-        this.saveData();
-        this.displayRecords();
-        this.updateRecordCount();
-        this.showNotification('記録を追加しました');
-        this.resetForm();
-    }
-
-    validateRecord(record) {
-        // 移動先は常に必須
-        if (!record.destination) {
-            this.showNotification('移動先は必須です', 'error');
-            document.getElementById('destination').focus();
-            return false;
-        }
-
-        // 同一日の初回記録チェック
-        const recordDate = record.datetime.split('T')[0];
-        const sameDayRecords = this.records.filter(r => {
-            const rDate = r.datetime.split('T')[0];
-            return rDate === recordDate;
-        });
-
-        const isFirstRecord = sameDayRecords.length === 0;
-
-        if (isFirstRecord) {
-            if (!record.distance) {
-                this.showNotification('同一日の1回目は走行距離が必須です', 'error');
-                document.getElementById('distance').focus();
-                return false;
-            }
-            if (!record.alcoholCheck) {
-                this.showNotification('同一日の1回目はアルコールチェックが必須です', 'error');
-                document.getElementById('alcohol-check').focus();
-                return false;
-            }
-        }
-
-        return true;
     }
 
     resetForm() {
@@ -610,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // ここで代替実装を行うか、ポリフィルを読み込む
     }
     
-    new DrivingLogApp();
+    new DrivingLog();
 });
 
 // モーダルの制御
