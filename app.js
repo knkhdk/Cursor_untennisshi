@@ -8,13 +8,42 @@ class DrivingLogApp {
     }
 
     init() {
+        this.loadData(); // 保存されたデータを読み込む
         this.bindEvents();
         this.setCurrentDateTime();
-        this.loadSampleData();
         this.updateRecordCount();
         this.updateMonthFilter();
         this.displayRecords();
         this.checkSameDayRecords();
+    }
+
+    // データをローカルストレージに保存
+    saveData() {
+        try {
+            localStorage.setItem('drivingLogRecords', JSON.stringify(this.records));
+            localStorage.setItem('drivingLogCurrentId', this.currentId.toString());
+        } catch (error) {
+            console.error('データの保存に失敗しました:', error);
+            this.showNotification('データの保存に失敗しました', 'error');
+        }
+    }
+
+    // ローカルストレージからデータを読み込む
+    loadData() {
+        try {
+            const savedRecords = localStorage.getItem('drivingLogRecords');
+            const savedCurrentId = localStorage.getItem('drivingLogCurrentId');
+            
+            if (savedRecords) {
+                this.records = JSON.parse(savedRecords);
+            }
+            if (savedCurrentId) {
+                this.currentId = parseInt(savedCurrentId);
+            }
+        } catch (error) {
+            console.error('データの読み込みに失敗しました:', error);
+            this.showNotification('データの読み込みに失敗しました', 'error');
+        }
     }
 
     loadSampleData() {
@@ -187,6 +216,7 @@ class DrivingLogApp {
         this.records.push(record);
         this.records.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
         
+        this.saveData(); // データを保存
         this.updateRecordCount();
         this.updateMonthFilter();
         this.displayRecords();
@@ -470,15 +500,11 @@ class DrivingLogApp {
     clearAllData() {
         this.records = [];
         this.currentId = 1;
-        
-        // 月別フィルタをリセット
-        const select = document.getElementById('month-filter');
-        select.innerHTML = '<option value="">全ての月</option>';
-        
+        this.saveData(); // データを保存
         this.updateRecordCount();
+        this.updateMonthFilter();
         this.displayRecords();
-        this.checkSameDayRecords();
-        this.showNotification('全てのデータを削除しました', 'success');
+        this.showNotification('全ての記録を削除しました', 'success');
     }
 
     // HTML5 Dialog を使用した確認ダイアログ
