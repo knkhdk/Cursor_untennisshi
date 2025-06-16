@@ -696,77 +696,62 @@ select.form-control {
 }
 
 .date-card {
-    background: white;
+    background-color: #ffffff;
     border-radius: 8px;
+    margin-bottom: 24px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    overflow: hidden;
 }
 
 .date-card__header {
-    background: #f5f5f5;
+    background-color: #f5f5f5;
     padding: 12px 16px;
     border-bottom: 1px solid #e0e0e0;
     font-weight: bold;
-    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #333333;
 }
 
 .record-entry {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 12px;
     padding: 16px;
-    border-bottom: 1px solid #e0e0e0;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    align-items: start;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.record-entry:last-child {
-    border-bottom: none;
-}
-
-.record-entry__time {
-    font-size: 0.9em;
-    color: #666;
-    grid-column: 1 / -1;
-}
-
-.record-entry__destination {
+.record-time {
+    font-size: 1.1em;
     font-weight: bold;
-    color: #333;
+    color: #333333;
+    margin-bottom: 8px;
 }
 
-.record-entry__details {
+.record-details {
+    color: #333333;
+}
+
+.record-location {
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: #333333;
+}
+
+.record-stats {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+    color: #333333;
 }
 
-.record-entry__detail {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.record-entry__label {
-    font-size: 0.85em;
-    color: #666;
-    min-width: 100px;
-}
-
-.record-entry__value {
-    font-weight: 500;
-    color: #333;
-}
-
-.record-entry__value--distance {
-    color: #2196F3;
-}
-
-.record-entry__value--alcohol {
-    color: #4CAF50;
-}
-
-.record-entry__value--fuel {
-    color: #FF9800;
+.record-stats span {
+    background-color: #f5f5f5;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
 }
 
 .empty-state {
@@ -819,10 +804,33 @@ select.form-control {
 
     .record-entry {
         padding: 12px;
+        margin-bottom: 8px;
     }
 
-    .record-entry__detail {
+    .record-time {
+        font-size: 1em;
+    }
+
+    .record-stats {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .record-stats span {
+        width: 100%;
+        padding: 6px 8px;
+    }
+
+    .date-card__header {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+
+    .btn--small {
+        width: 100%;
         padding: 8px;
+        font-size: 0.9em;
     }
 
     .form-control {
@@ -955,4 +963,19 @@ select {
     color: var(--color-text-light);
     margin-top: 4px;
     margin-bottom: 8px;
+}
+
+.btn--small {
+    padding: 4px 8px;
+    font-size: 0.8em;
+}
+
+.btn--danger {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+}
+
+.btn--danger:hover {
+    background-color: #c82333;
 }
