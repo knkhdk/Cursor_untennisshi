@@ -3,7 +3,7 @@ class DrivingLogApp {
     constructor() {
         this.records = [];
         this.currentId = 1;
-        this.version = '1.00';
+        this.version = '1.01';
         this.lastUpdate = new Date().toISOString();
         this.confirmCallback = null;
         this.backupInterval = null;
@@ -13,88 +13,97 @@ class DrivingLogApp {
         this.initDB();
     }
 
-    async initDB() {
+    initDB() {
         try {
-            const request = indexedDB.open(this.dbName, this.dbVersion);
-            
-            request.onerror = (event) => {
-                console.error('データベースの初期化に失敗しました:', event.target.error);
+            this.db = openDatabase(this.dbName, '1.0', 'Driving Log Database', 2 * 1024 * 1024);
+            this.db.transaction(tx => {
+                tx.executeSql(`
+                    CREATE TABLE IF NOT EXISTS records (
+                        id INTEGER PRIMARY KEY,
+                        datetime TEXT,
+                        destination TEXT,
+                        purpose TEXT,
+                        distance REAL,
+                        fuel REAL,
+                        alcohol INTEGER
+                    )
+                `);
+            }, error => {
+                console.error('テーブル作成エラー:', error);
                 this.showNotification('データベースの初期化に失敗しました', 'error');
-            };
-
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains(this.storeName)) {
-                    const store = db.createObjectStore(this.storeName, { keyPath: 'id' });
-                    store.createIndex('datetime', 'datetime', { unique: false });
-                }
-            };
-
-            request.onsuccess = (event) => {
-                const db = event.target.result;
-                this.loadData(db);
+            }, () => {
+                this.loadData();
                 this.initializeEventListeners();
                 this.setCurrentDateTime();
                 this.startAutoBackup();
                 this.checkStorageAvailability();
-            };
+            });
         } catch (error) {
             console.error('データベースの初期化中にエラーが発生しました:', error);
             this.showNotification('データベースの初期化中にエラーが発生しました', 'error');
         }
     }
 
-    async loadData(db) {
+    loadData() {
         try {
-            const transaction = db.transaction([this.storeName], 'readonly');
-            const store = transaction.objectStore(this.storeName);
-            const request = store.getAll();
-
-            request.onsuccess = () => {
-                this.records = request.result || [];
-                if (this.records.length > 0) {
-                    this.currentId = Math.max(...this.records.map(r => r.id)) + 1;
-                }
-                this.displayRecords();
-                this.updateRecordCount();
-            };
-
-            request.onerror = (event) => {
-                console.error('データの読み込みに失敗しました:', event.target.error);
+            this.db.transaction(tx => {
+                tx.executeSql('SELECT * FROM records ORDER BY datetime DESC', [], (tx, results) => {
+                    this.records = [];
+                    for (let i = 0; i < results.rows.length; i++) {
+                        const row = results.rows.item(i);
+                        this.records.push({
+                            id: row.id,
+                            datetime: row.datetime,
+                            destination: row.destination,
+                            purpose: row.purpose,
+                            distance: row.distance,
+                            fuel: row.fuel,
+                            alcohol: row.alcohol === 1
+                        });
+                    }
+                    if (this.records.length > 0) {
+                        this.currentId = Math.max(...this.records.map(r => r.id)) + 1;
+                    }
+                    this.displayRecords();
+                    this.updateRecordCount();
+                });
+            }, error => {
+                console.error('データ読み込みエラー:', error);
                 this.showNotification('データの読み込みに失敗しました', 'error');
-            };
+            });
         } catch (error) {
             console.error('データの読み込み中にエラーが発生しました:', error);
             this.showNotification('データの読み込み中にエラーが発生しました', 'error');
         }
     }
 
-    async saveData() {
+    saveData() {
         try {
-            const request = indexedDB.open(this.dbName, this.dbVersion);
-            
-            request.onsuccess = (event) => {
-                const db = event.target.result;
-                const transaction = db.transaction([this.storeName], 'readwrite');
-                const store = transaction.objectStore(this.storeName);
-
+            this.db.transaction(tx => {
                 // 既存のデータをクリア
-                store.clear();
-
+                tx.executeSql('DELETE FROM records');
+                
                 // 新しいデータを保存
                 this.records.forEach(record => {
-                    store.add(record);
+                    tx.executeSql(
+                        'INSERT INTO records (id, datetime, destination, purpose, distance, fuel, alcohol) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                        [
+                            record.id,
+                            record.datetime,
+                            record.destination,
+                            record.purpose,
+                            record.distance,
+                            record.fuel,
+                            record.alcohol ? 1 : 0
+                        ]
+                    );
                 });
-
-                transaction.oncomplete = () => {
-                    console.log('データを保存しました');
-                };
-
-                transaction.onerror = (event) => {
-                    console.error('データの保存に失敗しました:', event.target.error);
-                    this.showNotification('データの保存に失敗しました', 'error');
-                };
-            };
+            }, error => {
+                console.error('データ保存エラー:', error);
+                this.showNotification('データの保存に失敗しました', 'error');
+            }, () => {
+                console.log('データを保存しました');
+            });
         } catch (error) {
             console.error('データの保存中にエラーが発生しました:', error);
             this.showNotification('データの保存中にエラーが発生しました', 'error');
@@ -299,12 +308,11 @@ class DrivingLogApp {
         };
 
         this.records.push(record);
-        this.saveData().then(() => {
-            this.displayRecords();
-            this.updateRecordCount();
-            this.showNotification('記録を追加しました');
-            this.resetForm();
-        });
+        this.saveData();
+        this.displayRecords();
+        this.updateRecordCount();
+        this.showNotification('記録を追加しました');
+        this.resetForm();
     }
 
     validateRecord(record) {
