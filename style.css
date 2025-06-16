@@ -687,3 +687,104 @@ select.form-control {
     opacity: 0;
     pointer-events: none;
 }
+
+.records-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.date-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.date-card__header {
+    background: #f5f5f5;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: bold;
+    color: #333;
+}
+
+.record-entry {
+    padding: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.record-entry:last-child {
+    border-bottom: none;
+}
+
+.record-entry__time {
+    font-size: 0.9em;
+    color: #666;
+    grid-column: 1 / -1;
+}
+
+.record-entry__destination {
+    font-weight: bold;
+    color: #333;
+}
+
+.record-entry__details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.record-entry__detail {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.record-entry__label {
+    font-size: 0.85em;
+    color: #666;
+    min-width: 100px;
+}
+
+.record-entry__value {
+    font-weight: 500;
+    color: #333;
+}
+
+.record-entry__value--distance {
+    color: #2196F3;
+}
+
+.record-entry__value--alcohol {
+    color: #4CAF50;
+}
+
+.record-entry__value--fuel {
+    color: #FF9800;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.empty-state p {
+    margin: 0;
+    color: #666;
+}
+
+.empty-state p:first-child {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+}

@@ -314,20 +314,19 @@ class DrivingLogApp {
             container.innerHTML = `
                 <div class="empty-state">
                     <p>記録がありません</p>
-                    <p class="text-secondary">上記のフォームから新しい記録を追加してください。</p>
+                    <p>上記のフォームから新しい記録を追加してください。</p>
                 </div>
             `;
             return;
         }
 
-        // 日付別にグループ化
+        // 日付ごとにグループ化
         const groupedRecords = this.groupRecordsByDate(filteredRecords);
         
-        container.innerHTML = '';
-        Object.keys(groupedRecords).sort().reverse().forEach(date => {
-            const dateCard = this.createDateCard(date, groupedRecords[date]);
-            container.appendChild(dateCard);
-        });
+        // 日付ごとのカードを生成
+        container.innerHTML = Object.entries(groupedRecords)
+            .map(([date, records]) => this.createDateCard(date, records))
+            .join('');
     }
 
     groupRecordsByDate(records) {
@@ -342,69 +341,70 @@ class DrivingLogApp {
     }
 
     createDateCard(date, records) {
-        const card = document.createElement('div');
-        card.className = 'record-card';
-
         const formattedDate = this.formatDate(date);
-        
-        card.innerHTML = `
-            <div class="record-card__header">
-                <h3 class="record-card__date">${formattedDate}</h3>
-            </div>
-            <div class="record-card__body">
-                <div class="record-entries">
-                    ${records.map(record => this.createRecordEntry(record)).join('')}
+        const recordsHtml = records
+            .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
+            .map(record => this.createRecordEntry(record))
+            .join('');
+
+        return `
+            <div class="date-card">
+                <div class="date-card__header">
+                    ${formattedDate}
                 </div>
+                ${recordsHtml}
             </div>
         `;
-
-        return card;
     }
 
     createRecordEntry(record) {
-        const time = record.datetime.split('T')[1];
-        const formattedTime = time ? time.substring(0, 5) : '';
+        const time = new Date(record.datetime).toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
         return `
             <div class="record-entry">
-                <div class="record-entry__time">${formattedTime}</div>
+                <div class="record-entry__time">${time}</div>
+                <div class="record-entry__destination">${record.destination}</div>
                 <div class="record-entry__details">
-                    <div class="detail-item">
-                        <div class="detail-item__label">走行距離</div>
-                        <div class="detail-item__value ${!record.distance ? 'empty' : ''}">
-                            ${record.distance || '記録なし'} ${record.distance ? 'km' : ''}
+                    ${record.distance ? `
+                        <div class="record-entry__detail">
+                            <span class="record-entry__label">走行距離</span>
+                            <span class="record-entry__value record-entry__value--distance">
+                                ${record.distance} km
+                            </span>
                         </div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-item__label">移動先</div>
-                        <div class="detail-item__value">${record.destination}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-item__label">アルコールチェック</div>
-                        <div class="detail-item__value ${!record.alcoholCheck ? 'empty' : ''}">
-                            ${record.alcoholCheck || '記録なし'} ${record.alcoholCheck ? 'mg' : ''}
+                    ` : ''}
+                    ${record.alcoholCheck ? `
+                        <div class="record-entry__detail">
+                            <span class="record-entry__label">アルコール</span>
+                            <span class="record-entry__value record-entry__value--alcohol">
+                                ${record.alcoholCheck} mg
+                            </span>
                         </div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-item__label">給油記録</div>
-                        <div class="detail-item__value ${!record.fuelRecord ? 'empty' : ''}">
-                            ${record.fuelRecord || '給油なし'} ${record.fuelRecord ? 'L' : ''}
+                    ` : ''}
+                    ${record.fuelRecord ? `
+                        <div class="record-entry__detail">
+                            <span class="record-entry__label">給油</span>
+                            <span class="record-entry__value record-entry__value--fuel">
+                                ${record.fuelRecord} L
+                            </span>
                         </div>
-                    </div>
+                    ` : ''}
                 </div>
             </div>
         `;
     }
 
     formatDate(dateString) {
-        const date = new Date(dateString + 'T00:00:00');
-        const options = { 
-            year: 'numeric', 
-            month: 'long', 
+        const date = new Date(dateString);
+        return date.toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'long',
             day: 'numeric',
-            weekday: 'short'
-        };
-        return date.toLocaleDateString('ja-JP', options);
+            weekday: 'long'
+        });
     }
 
     updateRecordCount() {
