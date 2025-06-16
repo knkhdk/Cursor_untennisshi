@@ -788,3 +788,171 @@ select.form-control {
     margin-bottom: 8px;
     color: #333;
 }
+
+/* レスポンシブデザイン */
+@media (max-width: 480px) {
+    .container {
+        padding: 12px;
+    }
+
+    .card {
+        border-radius: 8px;
+        margin-bottom: 16px;
+    }
+
+    .card__header {
+        padding: 12px;
+    }
+
+    .card__body {
+        padding: 12px;
+    }
+
+    .date-card {
+        border-radius: 8px;
+    }
+
+    .date-card__header {
+        padding: 12px;
+        font-size: 1em;
+    }
+
+    .record-entry {
+        padding: 12px;
+    }
+
+    .record-entry__detail {
+        padding: 8px;
+    }
+
+    .form-control {
+        padding: 10px;
+        font-size: 16px; /* iOSでズームを防ぐ */
+    }
+
+    .btn {
+        padding: 10px 20px;
+        font-size: 16px;
+    }
+
+    .notification {
+        bottom: 12px;
+        right: 12px;
+        left: 12px;
+        padding: 12px;
+        border-radius: 8px;
+    }
+}
+
+/* iOSの入力フィールドのスタイル調整 */
+input[type="text"],
+input[type="number"],
+input[type="datetime-local"] {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 8px;
+}
+
+/* iOSのセレクトボックスのスタイル調整 */
+select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+/* タッチターゲットのサイズ調整 */
+button,
+.btn,
+.form-control,
+select {
+    min-height: 44px; /* iOSの推奨最小タッチターゲットサイズ */
+}
+
+/* スクロールのスムーズ化 */
+.records-container {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* テキスト選択の無効化 */
+.record-entry__time,
+.record-entry__label {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* 空の状態のスタイル */
+.empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.empty-state p {
+    margin: 0;
+    color: var(--color-text-light);
+}
+
+.empty-state p:first-child {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: var(--color-text);
+}
+
+/* フィルターとアクションのスタイル */
+.controls-section {
+    margin-bottom: 24px;
+}
+
+.controls-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+}
+
+@media (max-width: 480px) {
+    .controls-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .action-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+}
+
+/* 必須・任意の表示 */
+.required-indicator,
+.optional-indicator {
+    font-size: 0.8em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+}
+
+.required-indicator {
+    background-color: var(--color-error);
+    color: white;
+}
+
+.optional-indicator {
+    background-color: var(--color-text-light);
+    color: white;
+}
+
+/* フィールドノート */
+.field-note {
+    font-size: 0.85em;
+    color: var(--color-text-light);
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
