@@ -139,10 +139,12 @@
             <!-- 記録一覧 -->
             <section id="records-section">
                 <h2>記録一覧</h2>
-                <div id="records-container" class="records-container">
-                    <div class="empty-state">
-                        <p>記録がありません</p>
-                        <p class="text-secondary">上記のフォームから新しい記録を追加してください。</p>
+                <div class="record-list">
+                    <div id="records-container"></div>
+                    <div class="record-actions">
+                        <button id="exportButton" class="btn btn-secondary">エクスポート</button>
+                        <button id="importButton" class="btn btn-secondary">インポート</button>
+                        <button id="clearButton" class="btn btn-danger">全削除</button>
                     </div>
                 </div>
             </section>
