@@ -11,7 +11,8 @@ class DrivingLog {
     }
 
     init() {
-        this.loadData(); // 保存されたデータを読み込む
+        console.log('初期化を開始します');
+        this.loadData();
         this.bindEvents();
         this.setCurrentDateTime();
         this.updateRecordCount();
@@ -20,17 +21,21 @@ class DrivingLog {
         this.checkSameDayRecords();
         this.startAutoBackup();
         this.checkStorageAvailability();
+        console.log('初期化が完了しました');
     }
 
     // データをローカルストレージに保存
     saveData() {
         try {
-            localStorage.setItem('drivingLog', JSON.stringify({
+            const data = {
                 records: this.records,
                 currentId: this.currentId,
                 version: this.version,
                 lastUpdate: this.lastUpdate
-            }));
+            };
+            console.log('保存するデータ:', data);
+            localStorage.setItem('drivingLog', JSON.stringify(data));
+            console.log('データを保存しました');
         } catch (error) {
             console.error('データの保存に失敗しました:', error);
             this.showNotification('データの保存に失敗しました', 'error');
@@ -40,13 +45,18 @@ class DrivingLog {
     // ローカルストレージからデータを読み込む
     loadData() {
         try {
+            console.log('データの読み込みを開始します');
             const data = localStorage.getItem('drivingLog');
             if (data) {
                 const parsedData = JSON.parse(data);
+                console.log('読み込んだデータ:', parsedData);
                 this.records = parsedData.records || [];
                 this.currentId = parsedData.currentId || 1;
                 this.version = parsedData.version || this.version;
                 this.lastUpdate = parsedData.lastUpdate || this.lastUpdate;
+                console.log('データの読み込みが完了しました');
+            } else {
+                console.log('保存されたデータがありません');
             }
         } catch (error) {
             console.error('データの読み込みに失敗しました:', error);
@@ -55,6 +65,7 @@ class DrivingLog {
     }
 
     addRecord() {
+        console.log('記録の追加を開始します');
         const datetime = document.getElementById('datetime').value;
         const destination = document.getElementById('destination').value;
         const purpose = document.getElementById('purpose').value;
@@ -62,7 +73,10 @@ class DrivingLog {
         const fuel = document.getElementById('fuel').value;
         const alcohol = document.getElementById('alcohol').checked;
 
+        console.log('入力値:', { datetime, destination, purpose, distance, fuel, alcohol });
+
         if (!datetime || !destination) {
+            console.log('必須項目が入力されていません');
             this.showNotification('日時と目的地は必須項目です', 'error');
             return;
         }
@@ -77,12 +91,23 @@ class DrivingLog {
             alcohol
         };
 
+        console.log('新しい記録:', record);
+
         this.records.push(record);
+        console.log('記録を配列に追加しました');
+
         this.saveData();
+        console.log('データを保存しました');
+
         this.displayRecords();
+        console.log('記録一覧を更新しました');
+
         this.updateRecordCount();
+        console.log('記録数を更新しました');
+
         this.showNotification('記録を追加しました');
         this.resetForm();
+        console.log('記録の追加が完了しました');
     }
 
     initializeEventListeners() {
@@ -132,73 +157,13 @@ class DrivingLog {
     }
 
     bindEvents() {
-        // フォーム送信
-        document.getElementById('driving-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.addRecord();
-        });
-
-        // 月別フィルタ
-        document.getElementById('month-filter').addEventListener('change', () => {
-            this.displayRecords();
-        });
-
-        // エクスポート
-        document.getElementById('export-btn').addEventListener('click', () => {
-            this.exportData();
-        });
-
-        // インポート
-        document.getElementById('import-btn').addEventListener('click', () => {
-            document.getElementById('import-file').click();
-        });
-
-        document.getElementById('import-file').addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                this.importData(e.target.files[0]);
-            }
-            e.target.value = ''; // Reset file input
-        });
-
-        // データクリア
-        document.getElementById('clear-btn').addEventListener('click', () => {
-            this.showConfirmDialog(
-                'データクリア確認',
-                '全ての記録を削除しますか？この操作は取り消せません。',
-                () => this.clearAllData()
-            );
-        });
-
-        // HTML5 ダイアログイベント
-        const dialog = document.getElementById('confirm-dialog');
-        
-        document.getElementById('dialog-cancel').addEventListener('click', () => {
-            this.hideConfirmDialog();
-        });
-
-        document.getElementById('dialog-confirm').addEventListener('click', () => {
-            if (this.confirmCallback) {
-                this.confirmCallback();
-            }
-            this.hideConfirmDialog();
-        });
-
-        // ESCキーでダイアログを閉じる（HTML5 dialogのデフォルト動作）
-        dialog.addEventListener('cancel', (e) => {
-            this.confirmCallback = null;
-        });
-
-        // ダイアログの外側クリックで閉じる
-        dialog.addEventListener('click', (e) => {
-            if (e.target === dialog) {
-                this.hideConfirmDialog();
-            }
-        });
-
-        // 日時変更時の同一日チェック
-        document.getElementById('datetime').addEventListener('change', () => {
-            this.checkSameDayRecords();
-        });
+        console.log('イベントリスナーを設定します');
+        document.getElementById('addButton').addEventListener('click', () => this.addRecord());
+        document.getElementById('exportButton').addEventListener('click', () => this.exportData());
+        document.getElementById('importButton').addEventListener('click', () => this.importData());
+        document.getElementById('clearButton').addEventListener('click', () => this.clearAllRecords());
+        document.getElementById('monthFilter').addEventListener('change', () => this.displayRecords());
+        console.log('イベントリスナーの設定が完了しました');
     }
 
     setCurrentDateTime() {
@@ -479,7 +444,7 @@ class DrivingLog {
         this.confirmCallback = null;
     }
 
-    showNotification(message, type = 'success', duration = 5000) {
+    showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
         const notificationMessage = document.getElementById('notification-message');
         
@@ -487,153 +452,13 @@ class DrivingLog {
         notificationMessage.textContent = message;
         notification.classList.remove('hidden');
         
-        // エラーや警告の場合は長めに表示
-        if (type === 'error' || type === 'warning') {
-            duration = 10000;
-        }
-        
         setTimeout(() => {
             notification.classList.add('hidden');
-        }, duration);
+        }, 3000);
     }
-}
-
-// Object.groupBy のポリフィル（必要に応じて）
-if (!Object.groupBy) {
-    Object.groupBy = function(items, keyFn) {
-        return items.reduce((result, item) => {
-            const key = keyFn(item);
-            if (!result[key]) {
-                result[key] = [];
-            }
-            result[key].push(item);
-            return result;
-        }, {});
-    };
 }
 
 // アプリケーション初期化
 document.addEventListener('DOMContentLoaded', () => {
-    // HTML5 dialog サポートチェック
-    const dialog = document.createElement('dialog');
-    if (typeof dialog.showModal !== 'function') {
-        console.warn('HTML5 dialog not supported. Falling back to custom modal.');
-        // ここで代替実装を行うか、ポリフィルを読み込む
-    }
-    
     new DrivingLog();
-});
-
-// モーダルの制御
-const modal = {
-    element: document.getElementById('confirm-modal'),
-    title: document.getElementById('modal-title'),
-    message: document.getElementById('modal-message'),
-    confirmBtn: document.getElementById('modal-confirm'),
-    cancelBtn: document.getElementById('modal-cancel'),
-
-    show(title, message, onConfirm) {
-        this.title.textContent = title;
-        this.message.textContent = message;
-        this.element.classList.add('show');
-        
-        // イベントリスナーの設定
-        const handleConfirm = () => {
-            this.hide();
-            if (onConfirm) onConfirm();
-        };
-
-        const handleCancel = () => {
-            this.hide();
-        };
-
-        this.confirmBtn.onclick = handleConfirm;
-        this.cancelBtn.onclick = handleCancel;
-    },
-
-    hide() {
-        this.element.classList.remove('show');
-        this.confirmBtn.onclick = null;
-        this.cancelBtn.onclick = null;
-    }
-};
-
-// 現在の日時を取得する関数（日本時間）
-function getCurrentDateTime() {
-    // 日本時間を取得
-    const now = new Date();
-    const jstOffset = 9 * 60; // 日本時間のオフセット（分）
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const jst = new Date(utc + (jstOffset * 60000));
-    
-    const year = jst.getFullYear();
-    const month = String(jst.getMonth() + 1).padStart(2, '0');
-    const day = String(jst.getDate()).padStart(2, '0');
-    const hours = String(jst.getHours()).padStart(2, '0');
-    const minutes = String(jst.getMinutes()).padStart(2, '0');
-    
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-// フォームの処理
-document.getElementById('driving-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    // 日時が入力されていない場合は現在の日時を設定
-    const datetimeInput = document.getElementById('datetime');
-    if (!datetimeInput.value) {
-        datetimeInput.value = getCurrentDateTime();
-    }
-    
-    const formData = {
-        distance: document.getElementById('distance').value,
-        destination: document.getElementById('destination').value,
-        datetime: datetimeInput.value,
-        alcoholCheck: document.getElementById('alcohol-check').value,
-        fuelRecord: document.getElementById('fuel-record').value
-    };
-
-    // データの保存
-    google.script.run
-        .withSuccessHandler(function(response) {
-            showNotification('記録が保存されました', 'success');
-            document.getElementById('driving-form').reset();
-            updateRecordCount();
-        })
-        .withFailureHandler(function(error) {
-            showNotification('エラーが発生しました: ' + error, 'error');
-        })
-        .saveDrivingLog(formData);
-});
-
-// 通知の表示
-function showNotification(message, type = 'info') {
-    const notification = document.getElementById('notification');
-    const notificationMessage = document.getElementById('notification-message');
-    
-    notification.className = `notification ${type}`;
-    notificationMessage.textContent = message;
-    notification.classList.remove('hidden');
-    
-    setTimeout(() => {
-        notification.classList.add('hidden');
-    }, 3000);
-}
-
-// 記録件数の更新
-function updateRecordCount() {
-    google.script.run
-        .withSuccessHandler(function(count) {
-            document.getElementById('record-count').textContent = `記録件数: ${count}件`;
-        })
-        .getRecordCount();
-}
-
-// 初期化
-document.addEventListener('DOMContentLoaded', function() {
-    updateRecordCount();
-    
-    // 日時入力フィールドのプレースホルダーを現在の日時に設定
-    const datetimeInput = document.getElementById('datetime');
-    datetimeInput.placeholder = getCurrentDateTime();
 });
