@@ -183,8 +183,8 @@ class DrivingLogApp {
         const day = String(now.getDate()).padStart(2, '0');
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
-        const dateTimeString = `${year}-${month}-${day}T${hours}:${minutes}`;
-        document.getElementById('datetime').value = dateTimeString;
+        const datetime = `${year}-${month}-${day}T${hours}:${minutes}`;
+        document.getElementById('datetime').value = datetime;
     }
 
     checkSameDayRecords() {
@@ -299,10 +299,13 @@ class DrivingLogApp {
     }
 
     resetForm() {
-        document.getElementById('driving-form').reset();
-        document.getElementById('alcohol-check').value = '0.00';
+        document.getElementById('datetime').value = '';
+        document.getElementById('destination').value = '';
+        document.getElementById('purpose').value = '';
+        document.getElementById('distance').value = '';
+        document.getElementById('fuel').value = '';
+        document.getElementById('alcohol').checked = false;
         this.setCurrentDateTime();
-        this.checkSameDayRecords();
     }
 
     displayRecords() {
