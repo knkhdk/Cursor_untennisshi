@@ -4,6 +4,7 @@ class DrivingLogApp {
         this.records = [];
         this.currentId = 1;
         this.confirmCallback = null;
+        this.backupInterval = null;
         this.init();
     }
 
@@ -15,6 +16,26 @@ class DrivingLogApp {
         this.updateMonthFilter();
         this.displayRecords();
         this.checkSameDayRecords();
+        this.startAutoBackup();
+        this.checkStorageAvailability();
+    }
+
+    // ストレージの利用可能性をチェック
+    checkStorageAvailability() {
+        try {
+            localStorage.setItem('test', 'test');
+            localStorage.removeItem('test');
+        } catch (e) {
+            this.showNotification('データの保存に問題が発生しています。ブラウザの設定を確認してください。', 'error');
+        }
+    }
+
+    // 自動バックアップの開始
+    startAutoBackup() {
+        // 5分ごとにバックアップを実行
+        this.backupInterval = setInterval(() => {
+            this.exportData(true); // サイレントバックアップ
+        }, 5 * 60 * 1000);
     }
 
     // データをローカルストレージに保存
@@ -22,9 +43,10 @@ class DrivingLogApp {
         try {
             localStorage.setItem('drivingLogRecords', JSON.stringify(this.records));
             localStorage.setItem('drivingLogCurrentId', this.currentId.toString());
+            localStorage.setItem('drivingLogLastBackup', new Date().toISOString());
         } catch (error) {
             console.error('データの保存に失敗しました:', error);
-            this.showNotification('データの保存に失敗しました', 'error');
+            this.showNotification('データの保存に失敗しました。ブラウザのストレージ容量を確認してください。', 'error');
         }
     }
 
@@ -33,6 +55,7 @@ class DrivingLogApp {
         try {
             const savedRecords = localStorage.getItem('drivingLogRecords');
             const savedCurrentId = localStorage.getItem('drivingLogCurrentId');
+            const lastBackup = localStorage.getItem('drivingLogLastBackup');
             
             if (savedRecords) {
                 this.records = JSON.parse(savedRecords);
@@ -40,9 +63,20 @@ class DrivingLogApp {
             if (savedCurrentId) {
                 this.currentId = parseInt(savedCurrentId);
             }
+
+            // 最後のバックアップから24時間以上経過している場合は警告
+            if (lastBackup) {
+                const lastBackupDate = new Date(lastBackup);
+                const now = new Date();
+                const hoursSinceLastBackup = (now - lastBackupDate) / (1000 * 60 * 60);
+                
+                if (hoursSinceLastBackup > 24) {
+                    this.showNotification('最後のバックアップから24時間以上経過しています。データをエクスポートすることをお勧めします。', 'warning');
+                }
+            }
         } catch (error) {
             console.error('データの読み込みに失敗しました:', error);
-            this.showNotification('データの読み込みに失敗しました', 'error');
+            this.showNotification('データの読み込みに失敗しました。バックアップからの復元を試みてください。', 'error');
         }
     }
 
@@ -403,95 +437,60 @@ class DrivingLogApp {
         }
     }
 
-    exportData() {
-        if (this.records.length === 0) {
-            this.showNotification('エクスポートするデータがありません', 'error');
-            return;
+    exportData(silent = false) {
+        try {
+            const data = {
+                records: this.records,
+                currentId: this.currentId,
+                exportDate: new Date().toISOString(),
+                version: '0.92'
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `driving_log_backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            if (!silent) {
+                this.showNotification('データをエクスポートしました', 'success');
+            }
+        } catch (error) {
+            console.error('エクスポートに失敗しました:', error);
+            this.showNotification('エクスポートに失敗しました', 'error');
         }
-
-        // CSVヘッダー
-        const headers = ['日時', '走行距離(km)', '移動先', 'アルコールチェック(mg)', '給油記録(L)'];
-        
-        // データをCSV形式に変換
-        const csvRows = [
-            headers.join(','),
-            ...this.records.map(record => {
-                return [
-                    record.datetime,
-                    record.distance || '',
-                    `"${record.destination}"`,
-                    record.alcoholCheck || '',
-                    record.fuelRecord || ''
-                ].join(',');
-            })
-        ];
-
-        const csvContent = csvRows.join('\n');
-        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
-        
-        // 現在の日時を取得してファイル名を生成
-        const now = new Date();
-        const dateStr = now.getFullYear() + 
-                       String(now.getMonth() + 1).padStart(2, '0') + 
-                       String(now.getDate()).padStart(2, '0');
-        const fileName = `運転日誌_${dateStr}.csv`;
-
-        // ファイルを保存
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        // OneDriveへの保存方法を案内
-        this.showNotification(
-            'ファイルを保存しました。OneDriveにアップロードするには、' +
-            '1. OneDriveを開く' +
-            '2. 「アップロード」をクリック' +
-            '3. 保存したファイルを選択' +
-            'してください。',
-            'info',
-            10000 // 10秒間表示
-        );
     }
 
     importData(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const importedRecords = JSON.parse(e.target.result);
+                const data = JSON.parse(e.target.result);
                 
-                if (!Array.isArray(importedRecords)) {
-                    throw new Error('Invalid data format');
+                // バージョンチェック
+                if (data.version && data.version !== '0.92') {
+                    this.showNotification('異なるバージョンのデータです。インポートを中止します。', 'error');
+                    return;
                 }
 
-                // データの検証
-                const validRecords = importedRecords.filter(record => {
-                    return record.id && record.datetime && record.destination;
-                });
-
-                if (validRecords.length === 0) {
-                    throw new Error('No valid records found');
+                if (data.records && Array.isArray(data.records)) {
+                    this.records = data.records;
+                    this.currentId = data.currentId || this.currentId;
+                    this.saveData();
+                    this.updateRecordCount();
+                    this.updateMonthFilter();
+                    this.displayRecords();
+                    this.showNotification('データをインポートしました', 'success');
+                } else {
+                    throw new Error('無効なデータ形式です');
                 }
-
-                this.showConfirmDialog(
-                    'データインポート確認',
-                    `${validRecords.length}件の記録をインポートします。現在のデータは上書きされます。よろしいですか？`,
-                    () => {
-                        this.records = validRecords;
-                        this.currentId = Math.max(...this.records.map(r => r.id), 0) + 1;
-                        this.updateRecordCount();
-                        this.updateMonthFilter();
-                        this.displayRecords();
-                        this.checkSameDayRecords();
-                        this.showNotification(`${validRecords.length}件の記録をインポートしました`, 'success');
-                    }
-                );
             } catch (error) {
-                this.showNotification('データの読み込みに失敗しました。正しいJSONファイルを選択してください。', 'error');
+                console.error('インポートに失敗しました:', error);
+                this.showNotification('インポートに失敗しました。ファイルが正しい形式か確認してください。', 'error');
             }
         };
         reader.readAsText(file);
@@ -528,11 +527,15 @@ class DrivingLogApp {
         const notification = document.getElementById('notification');
         const notificationMessage = document.getElementById('notification-message');
         
-        notification.className = `notification ${type}`;
+        notification.className = `notification notification--${type}`;
         notificationMessage.textContent = message;
         notification.classList.remove('hidden');
         
-        // 通知を自動的に非表示にする
+        // エラーや警告の場合は長めに表示
+        if (type === 'error' || type === 'warning') {
+            duration = 10000;
+        }
+        
         setTimeout(() => {
             notification.classList.add('hidden');
         }, duration);

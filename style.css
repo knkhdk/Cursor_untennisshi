@@ -655,35 +655,35 @@ select.form-control {
 
 .notification {
     position: fixed;
-    top: var(--space-20);
-    right: var(--space-20);
-    background: var(--color-success);
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    background-color: #4CAF50;
     color: white;
-    padding: var(--space-16) var(--space-20);
-    border-radius: var(--radius-base);
-    box-shadow: var(--shadow-lg);
-    z-index: 1001;
-    max-width: 400px;
-    transition: transform var(--duration-normal) var(--ease-standard),
-                opacity var(--duration-normal) var(--ease-standard);
-    font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+    transition: opacity 0.3s ease-in-out;
+    max-width: 80%;
+}
+
+.notification--success {
+    background-color: #4CAF50;
+}
+
+.notification--error {
+    background-color: #f44336;
+}
+
+.notification--warning {
+    background-color: #ff9800;
+}
+
+.notification--info {
+    background-color: #2196F3;
 }
 
 .notification.hidden {
-    transform: translateX(calc(100% + var(--space-20)));
     opacity: 0;
-}
-
-.notification.error {
-    background: var(--color-error);
-}
-
-.notification.warning {
-    background: var(--color-warning);
-}
-
-.notification.info {
-    background: var(--color-info);
-    white-space: pre-line;
+    pointer-events: none;
 }
