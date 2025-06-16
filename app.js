@@ -3,6 +3,8 @@ class DrivingLogApp {
     constructor() {
         this.records = [];
         this.currentId = 1;
+        this.version = '0.955';
+        this.lastUpdate = new Date().toISOString();
         this.confirmCallback = null;
         this.backupInterval = null;
         this.init();
@@ -233,29 +235,34 @@ class DrivingLogApp {
     }
 
     addRecord() {
-        const record = {
-            id: this.currentId++,
-            datetime: document.getElementById('datetime').value,
-            distance: document.getElementById('distance').value.trim(),
-            destination: document.getElementById('destination').value.trim(),
-            alcoholCheck: document.getElementById('alcohol-check').value.trim(),
-            fuelRecord: document.getElementById('fuel-record').value.trim()
-        };
+        const datetime = document.getElementById('datetime').value;
+        const destination = document.getElementById('destination').value;
+        const purpose = document.getElementById('purpose').value;
+        const distance = document.getElementById('distance').value;
+        const fuel = document.getElementById('fuel').value;
+        const alcohol = document.getElementById('alcohol').checked;
 
-        // バリデーション
-        if (!this.validateRecord(record)) {
+        if (!datetime || !destination) {
+            this.showNotification('日時と目的地は必須項目です', 'error');
             return;
         }
 
+        const record = {
+            id: this.currentId++,
+            datetime,
+            destination,
+            purpose,
+            distance: distance ? parseFloat(distance) : null,
+            fuel: fuel ? parseFloat(fuel) : null,
+            alcohol
+        };
+
         this.records.push(record);
-        this.records.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
-        
-        this.saveData(); // データを保存
-        this.updateRecordCount();
-        this.updateMonthFilter();
+        this.saveData();
         this.displayRecords();
+        this.updateRecordCount();
+        this.showNotification('記録を追加しました');
         this.resetForm();
-        this.showNotification('記録を追加しました', 'success');
     }
 
     validateRecord(record) {
@@ -299,34 +306,45 @@ class DrivingLogApp {
     }
 
     displayRecords() {
-        const container = document.getElementById('records-container');
-        const monthFilter = document.getElementById('month-filter').value;
-        
-        let filteredRecords = this.records;
-        if (monthFilter) {
-            filteredRecords = this.records.filter(record => {
-                const recordMonth = record.datetime.substring(0, 7);
-                return recordMonth === monthFilter;
-            });
-        }
+        const recordsContainer = document.getElementById('records-container');
+        if (!recordsContainer) return;
 
-        if (filteredRecords.length === 0) {
-            container.innerHTML = `
+        if (this.records.length === 0) {
+            recordsContainer.innerHTML = `
                 <div class="empty-state">
                     <p>記録がありません</p>
-                    <p>上記のフォームから新しい記録を追加してください。</p>
+                    <p class="text-secondary">上記のフォームから新しい記録を追加してください。</p>
                 </div>
             `;
             return;
         }
 
-        // 日付ごとにグループ化
-        const groupedRecords = this.groupRecordsByDate(filteredRecords);
+        // 日付でグループ化
+        const groupedRecords = this.groupRecordsByDate(this.records);
         
-        // 日付ごとのカードを生成
-        container.innerHTML = Object.entries(groupedRecords)
-            .map(([date, records]) => this.createDateCard(date, records))
-            .join('');
+        // 日付を降順（新しい順）にソート
+        const sortedDates = Object.keys(groupedRecords).sort((a, b) => {
+            const dateA = new Date(a.replace(/年|月|日/g, '/'));
+            const dateB = new Date(b.replace(/年|月|日/g, '/'));
+            return dateB - dateA;
+        });
+
+        // 記録一覧を生成
+        let html = '';
+        for (const date of sortedDates) {
+            const records = groupedRecords[date];
+            // 各日付内の記録を時間の降順（新しい順）にソート
+            records.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+            
+            html += `
+                <div class="date-card">
+                    <div class="date-card__header">${date}</div>
+                    ${records.map(record => this.createRecordEntry(record)).join('')}
+                </div>
+            `;
+        }
+        
+        recordsContainer.innerHTML = html;
     }
 
     groupRecordsByDate(records) {
@@ -340,58 +358,25 @@ class DrivingLogApp {
         }, {});
     }
 
-    createDateCard(date, records) {
-        const formattedDate = this.formatDate(date);
-        const recordsHtml = records
-            .sort((a, b) => new Date(a.datetime) - new Date(b.datetime))
-            .map(record => this.createRecordEntry(record))
-            .join('');
-
-        return `
-            <div class="date-card">
-                <div class="date-card__header">
-                    ${formattedDate}
-                </div>
-                ${recordsHtml}
-            </div>
-        `;
-    }
-
     createRecordEntry(record) {
-        const time = new Date(record.datetime).toLocaleTimeString('ja-JP', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        const time = record.datetime.split(' ')[1];
+        const location = record.destination || '未設定';
+        const purpose = record.purpose || '未設定';
+        const distance = record.distance ? `${record.distance}km` : '未設定';
+        const fuel = record.fuel ? `${record.fuel}L` : '未設定';
+        const alcohol = record.alcohol ? '実施済' : '未実施';
 
         return `
-            <div class="record-entry">
-                <div class="record-entry__time">${time}</div>
-                <div class="record-entry__destination">${record.destination}</div>
-                <div class="record-entry__details">
-                    ${record.distance ? `
-                        <div class="record-entry__detail">
-                            <span class="record-entry__label">走行距離</span>
-                            <span class="record-entry__value record-entry__value--distance">
-                                ${record.distance} km
-                            </span>
-                        </div>
-                    ` : ''}
-                    ${record.alcoholCheck ? `
-                        <div class="record-entry__detail">
-                            <span class="record-entry__label">アルコール</span>
-                            <span class="record-entry__value record-entry__value--alcohol">
-                                ${record.alcoholCheck} mg
-                            </span>
-                        </div>
-                    ` : ''}
-                    ${record.fuelRecord ? `
-                        <div class="record-entry__detail">
-                            <span class="record-entry__label">給油</span>
-                            <span class="record-entry__value record-entry__value--fuel">
-                                ${record.fuelRecord} L
-                            </span>
-                        </div>
-                    ` : ''}
+            <div class="record-entry" data-id="${record.id}">
+                <div class="record-time">${time}</div>
+                <div class="record-details">
+                    <div class="record-location">${location}</div>
+                    <div class="record-purpose">${purpose}</div>
+                    <div class="record-stats">
+                        <span class="record-distance">走行距離: ${distance}</span>
+                        <span class="record-fuel">給油量: ${fuel}</span>
+                        <span class="record-alcohol">アルコールチェック: ${alcohol}</span>
+                    </div>
                 </div>
             </div>
         `;
